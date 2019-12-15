@@ -75,21 +75,6 @@ enum WireSection {
 }
 
 impl WireSection {
-    fn new(x:i64, y:i64, direction:char, distance:i64) -> Option<WireSection> {
-        match direction {
-            'U' =>
-                Some(WireSection::Vertical(x, y, y+distance, true)),
-            'D' =>
-                Some(WireSection::Vertical(x, y-distance, y, false)),
-            'R' =>
-                Some(WireSection::Horizontal(x, y, x+distance, true)),
-            'L' =>
-                Some(WireSection::Horizontal(x-distance, y, x, false)),
-            _ =>
-                None
-        }
-    }
-
     fn steps(&self) -> i64 {
         match self {
             WireSection::Vertical(_, ymin, ymax, _) =>
@@ -163,10 +148,9 @@ impl Wire {
 
     fn intersections_with_steps(&self, wire: &Wire) -> Vec<(i64,i64,i64,i64)> {
         let mut self_steps:i64 = 0;
-        let mut wire_steps:i64 = 0;
         let mut intersections:Vec<(i64,i64,i64,i64)> = Vec::new();
         for ws in self.0.iter() {
-            wire_steps = 0;
+            let mut wire_steps:i64 = 0;
             for ws2 in wire.0.iter() {
                 if let Some((x,y,s1,s2)) = ws.intersection(ws2) {
                     intersections.push((x,y,self_steps+s1,wire_steps+s2))
