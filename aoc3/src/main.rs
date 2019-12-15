@@ -90,13 +90,32 @@ impl WireSection {
         }
     }
 
-    fn intersection(&self, wire: &WireSection) -> Option<(i64, i64)> {
+    fn steps(&self) -> i64 {
+        match self {
+            WireSection::Vertical(_, ymin, ymax, _) =>
+                (ymax-ymin).abs(),
+            WireSection::Horizontal(xmin, _, xmax, _) =>
+                (xmax-xmin).abs()
+        }
+    }
+
+    fn intersection(&self, wire: &WireSection) -> Option<(i64, i64, i64, i64)> {
         match (self, wire) {
-            (WireSection::Vertical(xv, yv, yv2, _), WireSection::Horizontal(xh, yh, xh2, _))
-            | (WireSection::Horizontal(xh, yh, xh2, _), WireSection::Vertical(xv, yv, yv2, _)) =>
+            (WireSection::Vertical(xv, yv, yv2, vd), WireSection::Horizontal(xh, yh, xh2, hd)) =>
                 if ((yh > yv) && (yh < yv2))
                 && ((xv > xh) && (xv < xh2)) {
-                    Some((*xv, *yh))
+                    let steps1 = if *vd { yh - yv } else { yv2 - yh };
+                    let steps2 = if *hd { xv - xh } else { xh2 - xv };
+                    Some((*xv, *yh, steps1, steps2))
+                } else {
+                    None
+                }
+            (WireSection::Horizontal(xh, yh, xh2, hd), WireSection::Vertical(xv, yv, yv2, vd)) =>
+                if ((yh > yv) && (yh < yv2))
+                && ((xv > xh) && (xv < xh2)) {
+                    let steps1 = if *hd { xv - xh } else { xh2 - xv };
+                    let steps2 = if *vd { yh - yv } else { yv2 - yh };
+                    Some((*xv, *yh, steps1, steps2))
                 } else {
                     None
                 }
@@ -120,11 +139,12 @@ impl fmt::Display for WireSection {
     }
 }
 
+#[derive(Debug)]
 struct Wire(Vec<WireSection>);
 
 impl Wire {
-    fn intersections(&self, wire: &Wire) -> Vec<(i64,i64)> {
-        let mut intersections:Vec<(i64,i64)> = Vec::new();
+    fn intersections(&self, wire: &Wire) -> Vec<(i64,i64,i64,i64)> {
+        let mut intersections:Vec<(i64,i64,i64,i64)> = Vec::new();
         for ws in self.0.iter() {
             for ws2 in wire.0.iter() {
                 if let Some(i) = ws.intersection(ws2) {
@@ -137,7 +157,30 @@ impl Wire {
 
     fn min_intersection_distance(&self, wire: &Wire) -> Option<i64> {
         self.intersections(wire).iter()
-            .map(|(x, y)| x.abs() + y.abs())
+            .map(|(x, y, _, _)| x.abs() + y.abs())
+            .min()
+    }
+
+    fn intersections_with_steps(&self, wire: &Wire) -> Vec<(i64,i64,i64,i64)> {
+        let mut self_steps:i64 = 0;
+        let mut wire_steps:i64 = 0;
+        let mut intersections:Vec<(i64,i64,i64,i64)> = Vec::new();
+        for ws in self.0.iter() {
+            wire_steps = 0;
+            for ws2 in wire.0.iter() {
+                if let Some((x,y,s1,s2)) = ws.intersection(ws2) {
+                    intersections.push((x,y,self_steps+s1,wire_steps+s2))
+                }
+                wire_steps += ws2.steps();
+            }
+            self_steps += ws.steps();
+        }
+        intersections
+    }
+
+    fn min_intersection_steps(&self, wire: &Wire) -> Option<i64> {
+        self.intersections_with_steps(wire).iter()
+            .map(|(_, _, s1, s2)| s1 + s2)
             .min()
     }
 }
@@ -161,6 +204,11 @@ fn main() {
     let wires = load_input();
     let distance = wires[0].min_intersection_distance(&wires[1]);
     match distance {
+        Some(d) => println!("{}", d),
+        None => println!("No intersections")
+    }
+    let steps = wires[0].min_intersection_steps(&wires[1]);
+    match steps {
         Some(d) => println!("{}", d),
         None => println!("No intersections")
     }
@@ -193,5 +241,13 @@ mod tests {
         let wire2 = line_to_wire("U98,R91,D20,R16,D67,R40,U7,R15,U6,R7");
         let minimum_distance = wire1.min_intersection_distance(&wire2);
         assert_eq!(minimum_distance,Some(135));
+    }
+
+    #[test]
+    fn test_steps_1() {
+        let wire1 = line_to_wire("R75,D30,R83,U83,L12,D49,R71,U7,L72");
+        let wire2 = line_to_wire("U62,R66,U55,R34,D71,R55,D58,R83");
+        let minimum_steps = wire1.min_intersection_steps(&wire2);
+        assert_eq!(minimum_steps,Some(610));
     }
 }
