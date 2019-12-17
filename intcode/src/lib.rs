@@ -39,7 +39,47 @@ impl IntComputer {
                     let arg1 = self.argument_value(mode1, 1);
                     self.output.push_back(arg1);
                     self.position += 2;
-                }
+                },
+                5 => {
+                    let arg1 = self.argument_value(mode1, 1);
+                    let arg2 = self.argument_value(mode2, 2);
+                    if arg1 != 0 {
+                        self.position = arg2.try_into().unwrap();
+                    } else {
+                        self.position += 3;
+                    }
+                },
+                6 => {
+                    let arg1 = self.argument_value(mode1, 1);
+                    let arg2 = self.argument_value(mode2, 2);
+                    if arg1 == 0 {
+                        self.position = arg2.try_into().unwrap();
+                    } else {
+                        self.position += 3;
+                    }
+                },
+                7 => {
+                    let arg1 = self.argument_value(mode1, 1);
+                    let arg2 = self.argument_value(mode2, 2);
+                    let arg3:usize = self.argument_value(1, 3).try_into().unwrap();
+                    if arg1 < arg2 {
+                        self.state[arg3] = 1
+                    } else {
+                        self.state[arg3] = 0
+                    }
+                    self.position += 4;
+                },
+                8 => {
+                    let arg1 = self.argument_value(mode1, 1);
+                    let arg2 = self.argument_value(mode2, 2);
+                    let arg3:usize = self.argument_value(1, 3).try_into().unwrap();
+                    if arg1 == arg2 {
+                        self.state[arg3] = 1
+                    } else {
+                        self.state[arg3] = 0
+                    }
+                    self.position += 4;
+                },
                 99 => break,
                 _ => ()
             }
@@ -136,5 +176,86 @@ mod tests {
         ic.execute();
         assert_eq!(ic.read(), Some(145));
         assert_eq!(ic.read(), None)
+    }
+
+    #[test]
+    fn test_equal_less_than() {
+        let mut ic = IntComputer::load(vec![3,9,8,9,10,9,4,9,99,-1,8]);
+        ic.write(8);
+        ic.execute();
+        assert_eq!(ic.read(), Some(1));
+        let mut ic = IntComputer::load(vec![3,9,8,9,10,9,4,9,99,-1,8]);
+        ic.write(7);
+        ic.execute();
+        assert_eq!(ic.read(), Some(0));
+        let mut ic = IntComputer::load(vec![3,9,7,9,10,9,4,9,99,-1,8]);
+        ic.write(9);
+        ic.execute();
+        assert_eq!(ic.read(), Some(0));
+        let mut ic = IntComputer::load(vec![3,9,7,9,10,9,4,9,99,-1,8]);
+        ic.write(7);
+        ic.execute();
+        assert_eq!(ic.read(), Some(1));
+        let mut ic = IntComputer::load(vec![3,3,1108,-1,8,3,4,3,99]);
+        ic.write(8);
+        ic.execute();
+        assert_eq!(ic.read(), Some(1));
+        let mut ic = IntComputer::load(vec![3,3,1108,-1,8,3,4,3,99]);
+        ic.write(7);
+        ic.execute();
+        assert_eq!(ic.read(), Some(0));
+        let mut ic = IntComputer::load(vec![3,3,1107,-1,8,3,4,3,99]);
+        ic.write(8);
+        ic.execute();
+        assert_eq!(ic.read(), Some(0));
+        let mut ic = IntComputer::load(vec![3,3,1107,-1,8,3,4,3,99]);
+        ic.write(7);
+        ic.execute();
+        assert_eq!(ic.read(), Some(1));
+    }
+
+    #[test]
+    fn test_jumps() {
+        let mut ic = IntComputer::load(vec![3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9]);
+        ic.write(0);
+        ic.execute();
+        assert_eq!(ic.read(), Some(0));
+        let mut ic = IntComputer::load(vec![3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9]);
+        ic.write(100);
+        ic.execute();
+        assert_eq!(ic.read(), Some(1));
+        let mut ic = IntComputer::load(vec![3,3,1105,-1,9,1101,0,0,12,4,12,99,1]);
+        ic.write(0);
+        ic.execute();
+        assert_eq!(ic.read(), Some(0));
+        let mut ic = IntComputer::load(vec![3,3,1105,-1,9,1101,0,0,12,4,12,99,1]);
+        ic.write(100);
+        ic.execute();
+        assert_eq!(ic.read(), Some(1));
+    }
+
+    #[test]
+    fn test_jumps_larger() {
+        let mut ic = IntComputer::load(
+            vec![3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,
+                 1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,
+                 999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99]);
+        ic.write(7);
+        ic.execute();
+        assert_eq!(ic.read(), Some(999));
+        let mut ic = IntComputer::load(
+            vec![3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,
+                 1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,
+                 999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99]);
+        ic.write(8);
+        ic.execute();
+        assert_eq!(ic.read(), Some(1000));
+        let mut ic = IntComputer::load(
+            vec![3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,
+                 1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,
+                 999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99]);
+        ic.write(9);
+        ic.execute();
+        assert_eq!(ic.read(), Some(1001));
     }
 }

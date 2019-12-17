@@ -20,4 +20,12 @@ fn main() {
     while let Some(i) = ic.read() {
         println!("{}", i)
     }
+
+    ic = IntComputer::load(load_input());
+    ic.write(5);
+    ic.execute();
+
+    while let Some(i) = ic.read() {
+        println!("{}", i)
+    }
 }
