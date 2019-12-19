@@ -73,7 +73,24 @@ impl SolarSystem {
             .collect()
     }
 
+    fn transfers(&self, key1:&String, key2:&String) -> usize {
+        let path1 = self.path(key1);
+        let path2 = self.path(key2);
+        //let mut iter = path1.iter().zip(path2.iter());
+        dbg!(path1, path2);
+        0
+    }
 
+    fn path(&self, key:&String) -> Vec<String> {
+        let mut v = Vec::new();
+        let mut p = self.planets.get(key).unwrap();
+        while let Some(o) = &p.orbited {
+            v.push(o.to_owned());
+            p = self.planets.get(o).unwrap();
+        }
+        v.reverse();
+        v
+    }
 }
 
 fn process_planets(planets: Vec<(String, String)>) -> SolarSystem {
@@ -104,7 +121,9 @@ fn load_file() -> Vec<(String, String)> {
 fn main() {
     println!("Hello, world!");
     let system = process_planets(load_file());
-    println!("{}", system.orbits());
+    let you = "YOU".to_owned();
+    let san = "SAN".to_owned();
+    println!("{}, {}", system.orbits(), system.transfers(&you, &san));
 }
 
 #[cfg(test)]
@@ -128,6 +147,28 @@ mod tests {
             ];
         let system = process_planets(planets);
         assert_eq!(system.orbits(),42);
+    }
+
+    #[test]
+    fn test_transfers_1() {
+        let planets = vec![
+            ("COM".to_owned(),"B".to_owned()),
+            ("B".to_owned(),"C".to_owned()),
+            ("C".to_owned(),"D".to_owned()),
+            ("D".to_owned(),"E".to_owned()),
+            ("E".to_owned(),"F".to_owned()),
+            ("B".to_owned(),"G".to_owned()),
+            ("G".to_owned(),"H".to_owned()),
+            ("D".to_owned(),"I".to_owned()),
+            ("E".to_owned(),"J".to_owned()),
+            ("J".to_owned(),"K".to_owned()),
+            ("K".to_owned(),"L".to_owned()),
+            ("K".to_owned(),"YOU".to_owned()),
+            ("I".to_owned(),"SAN".to_owned()),
+            ];
+        let system = process_planets(planets);
+        let transfers = system.transfers(&"YOU".to_owned(), &"SAN".to_owned());
+        assert_eq!(transfers,4);
     }
 
 }
