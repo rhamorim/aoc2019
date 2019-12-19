@@ -44,6 +44,36 @@ impl SolarSystem {
             }
         }
     }
+
+    fn orbits(&self) -> usize {
+        let baseplanets = self.planets.iter()
+            .filter_map(|(k, v)| if v.orbited == None { Some(k) } else { None } );
+
+        let mut orbits = 0;
+
+        for baseplanet in baseplanets {
+            let mut v = vec![baseplanet.to_owned()];
+            let mut base_n = 0;
+            while v.len() > 0 {
+                base_n += 1;
+                v = self.orbiting(&v);
+                orbits += base_n * v.len();
+            }
+        }
+
+        orbits
+    }
+
+    fn orbiting(&self, planetkeys:&Vec<String>) -> Vec<String> {
+        planetkeys.iter()
+            .map(|key| {
+                self.planets.get(key).unwrap().orbiting.to_owned()
+            })
+            .flatten()
+            .collect()
+    }
+
+
 }
 
 fn process_planets(planets: Vec<(String, String)>) -> SolarSystem {
@@ -74,7 +104,7 @@ fn load_file() -> Vec<(String, String)> {
 fn main() {
     println!("Hello, world!");
     let system = process_planets(load_file());
-    dbg!(system);
+    println!("{}", system.orbits());
 }
 
 #[cfg(test)]
@@ -97,7 +127,7 @@ mod tests {
             ("K".to_owned(),"L".to_owned()),
             ];
         let system = process_planets(planets);
-        assert_eq!(0,1);
+        assert_eq!(system.orbits(),42);
     }
 
 }
