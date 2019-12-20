@@ -1,6 +1,7 @@
 use std::convert::TryInto;
 use std::collections::VecDeque;
 
+#[derive(Debug)]
 pub enum ExecutionState {
     ReadyToRun,
     Running,
