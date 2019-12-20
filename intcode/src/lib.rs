@@ -1,89 +1,123 @@
 use std::convert::TryInto;
 use std::collections::VecDeque;
 
+pub enum ExecutionState {
+    ReadyToRun,
+    Running,
+    WaitingInput,
+    Halted,
+    FatalError
+}
+
 pub struct IntComputer {
     state: Vec<i64>,
     position: usize,
     input: VecDeque<i64>,
     output: VecDeque<i64>,
+    execution_state: ExecutionState
 }
 
 impl IntComputer {
-    pub fn execute(&mut self) {
-        self.position = 0;
-        while self.position <= self.state.len() {
-            let (opcode, mode1, mode2, _mode3) = self.opcode();
-            match opcode {
-                1 => {
-                    let arg1 = self.argument_value(mode1, 1);
-                    let arg2 = self.argument_value(mode2, 2);
-                    let arg3:usize = self.argument_value(1, 3).try_into().unwrap();
-                    self.state[arg3] = arg1 + arg2;
-                    self.position += 4;
-                },
-                2 => {
-                    let arg1 = self.argument_value(mode1, 1);
-                    let arg2 = self.argument_value(mode2, 2);
-                    let arg3:usize = self.argument_value(1, 3).try_into().unwrap();
-                    self.state[arg3] = arg1 * arg2;
-                    self.position += 4;
-                },
-                3 => {
-                    let arg1:usize = self.argument_value(1, 1).try_into().unwrap();
-                    if let Some(i) = self.input.pop_front() {
-                        self.state[arg1] = i
-                    }
-                    self.position += 2;
-                },
-                4 => {
-                    let arg1 = self.argument_value(mode1, 1);
-                    self.output.push_back(arg1);
-                    self.position += 2;
-                },
-                5 => {
-                    let arg1 = self.argument_value(mode1, 1);
-                    let arg2 = self.argument_value(mode2, 2);
-                    if arg1 != 0 {
-                        self.position = arg2.try_into().unwrap();
-                    } else {
-                        self.position += 3;
-                    }
-                },
-                6 => {
-                    let arg1 = self.argument_value(mode1, 1);
-                    let arg2 = self.argument_value(mode2, 2);
-                    if arg1 == 0 {
-                        self.position = arg2.try_into().unwrap();
-                    } else {
-                        self.position += 3;
-                    }
-                },
-                7 => {
-                    let arg1 = self.argument_value(mode1, 1);
-                    let arg2 = self.argument_value(mode2, 2);
-                    let arg3:usize = self.argument_value(1, 3).try_into().unwrap();
-                    if arg1 < arg2 {
-                        self.state[arg3] = 1
-                    } else {
-                        self.state[arg3] = 0
-                    }
-                    self.position += 4;
-                },
-                8 => {
-                    let arg1 = self.argument_value(mode1, 1);
-                    let arg2 = self.argument_value(mode2, 2);
-                    let arg3:usize = self.argument_value(1, 3).try_into().unwrap();
-                    if arg1 == arg2 {
-                        self.state[arg3] = 1
-                    } else {
-                        self.state[arg3] = 0
-                    }
-                    self.position += 4;
-                },
-                99 => break,
-                _ => ()
+    pub fn execute(&mut self) -> &ExecutionState {
+        loop {
+            match self.execute_step() {
+                ExecutionState::Running =>
+                    continue,
+                _ =>
+                    break,
             }
         }
+        &self.execution_state
+    }
+
+    pub fn execute_step(&mut self) -> &ExecutionState {
+        match self.execution_state {
+            ExecutionState::Halted | ExecutionState::FatalError => {
+                return &self.execution_state
+            }
+            _ => ()
+        }
+
+        self.execution_state = ExecutionState::Running;
+
+        let (opcode, mode1, mode2, _mode3) = self.opcode();
+        match opcode {
+            1 => {
+                let arg1 = self.argument_value(mode1, 1);
+                let arg2 = self.argument_value(mode2, 2);
+                let arg3:usize = self.argument_value(1, 3).try_into().unwrap();
+                self.state[arg3] = arg1 + arg2;
+                self.position += 4;
+            },
+            2 => {
+                let arg1 = self.argument_value(mode1, 1);
+                let arg2 = self.argument_value(mode2, 2);
+                let arg3:usize = self.argument_value(1, 3).try_into().unwrap();
+                self.state[arg3] = arg1 * arg2;
+                self.position += 4;
+            },
+            3 => {
+                let arg1:usize = self.argument_value(1, 1).try_into().unwrap();
+                if let Some(i) = self.input.pop_front() {
+                    self.state[arg1] = i;
+                    self.position += 2;
+                } else {
+                    self.execution_state = ExecutionState::WaitingInput;
+                }
+            },
+            4 => {
+                let arg1 = self.argument_value(mode1, 1);
+                self.output.push_back(arg1);
+                self.position += 2;
+            },
+            5 => {
+                let arg1 = self.argument_value(mode1, 1);
+                let arg2 = self.argument_value(mode2, 2);
+                if arg1 != 0 {
+                    self.position = arg2.try_into().unwrap();
+                } else {
+                    self.position += 3;
+                }
+            },
+            6 => {
+                let arg1 = self.argument_value(mode1, 1);
+                let arg2 = self.argument_value(mode2, 2);
+                if arg1 == 0 {
+                    self.position = arg2.try_into().unwrap();
+                } else {
+                    self.position += 3;
+                }
+            },
+            7 => {
+                let arg1 = self.argument_value(mode1, 1);
+                let arg2 = self.argument_value(mode2, 2);
+                let arg3:usize = self.argument_value(1, 3).try_into().unwrap();
+                if arg1 < arg2 {
+                    self.state[arg3] = 1
+                } else {
+                    self.state[arg3] = 0
+                }
+                self.position += 4;
+            },
+            8 => {
+                let arg1 = self.argument_value(mode1, 1);
+                let arg2 = self.argument_value(mode2, 2);
+                let arg3:usize = self.argument_value(1, 3).try_into().unwrap();
+                if arg1 == arg2 {
+                    self.state[arg3] = 1
+                } else {
+                    self.state[arg3] = 0
+                }
+                self.position += 4;
+            },
+            99 => {
+                self.execution_state = ExecutionState::Halted
+            },
+            _ => {
+                self.execution_state = ExecutionState::FatalError
+            }
+        }
+        &self.execution_state
     }
 
     pub fn load(state: Vec<i64>) -> IntComputer {
@@ -91,7 +125,8 @@ impl IntComputer {
             state : state,
             position : 0,
             input: VecDeque::new(),
-            output: VecDeque::new()
+            output: VecDeque::new(),
+            execution_state: ExecutionState::ReadyToRun
         }
     }
 
