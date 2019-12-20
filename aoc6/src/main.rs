@@ -76,9 +76,23 @@ impl SolarSystem {
     fn transfers(&self, key1:&String, key2:&String) -> usize {
         let path1 = self.path(key1);
         let path2 = self.path(key2);
-        //let mut iter = path1.iter().zip(path2.iter());
-        dbg!(path1, path2);
-        0
+        let mut i1 = path1.iter();
+        let mut i2 = path2.iter();
+        let mut transfers = 0;
+        loop {
+            if let (Some(p1), Some(p2)) = (i1.next(), i2.next()) {
+                if p1 == p2 {
+                    continue;
+                } else {
+                    transfers = i1.count() + i2.count() + 2;
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        
+        transfers
     }
 
     fn path(&self, key:&String) -> Vec<String> {
